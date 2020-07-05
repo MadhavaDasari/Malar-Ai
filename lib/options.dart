@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:Malar_Ai/result.dart';
-import 'dart:async';
+import 'package:async_loader/async_loader.dart';
+import 'package:Malar_Ai/Async_loader.dart';
+import 'package:Malar_Ai/side_menu.dart';
+import 'package:progress_dialog/progress_dialog.dart';
+
+ProgressDialog pr;
 
 class ImageSelector extends StatefulWidget {
   @override
@@ -12,10 +14,22 @@ class ImageSelector extends StatefulWidget {
 }
 
 class _ImageSelectorState extends State<ImageSelector> {
+  double percentage = 0.0;
+  final GlobalKey<AsyncLoaderState> asyncLoaderState =
+      new GlobalKey<AsyncLoaderState>();
+
   File image;
   @override
   Widget build(BuildContext context) {
+    pr = ProgressDialog(
+      context,
+      type: ProgressDialogType.Download,
+      textDirection: TextDirection.rtl,
+      isDismissible: true,
+    );
+
     return Scaffold(
+        drawer: SideMenu(),
         appBar: AppBar(
           centerTitle: true,
           elevation: 20,
@@ -23,18 +37,34 @@ class _ImageSelectorState extends State<ImageSelector> {
         ),
         body: Center(
           child: Container(
-            padding: EdgeInsets.all(15),
+            // padding: EdgeInsets.all(15),
             child: Column(
               children: <Widget>[
-                Text("Upload the blood Sample Image ",
-                    style: TextStyle(
-                      fontSize: 20,
-                    )),
-                IconButton(
-                  icon: Icon(Icons.add_a_photo),
-                  onPressed: () {
-                    showAlertDialog(context);
-                  },
+                Card(
+                  elevation: 40,
+                  shadowColor: Colors.purple,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(20.0),
+                          bottomRight: Radius.circular(20.0))),
+                  margin: EdgeInsets.only(left: 20, right: 20, top: 0),
+                  color: Colors.purple,
+                  child: ListTile(
+                      title: Text("Upload the Blood Sample Image :",
+                          style: TextStyle(color: Colors.white, fontSize: 15))),
+                ),
+                CircleAvatar(
+                  backgroundColor: Colors.yellow[600],
+                  radius: 30,
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.add_a_photo,
+                      color: Colors.purple,
+                    ),
+                    onPressed: () {
+                      showAlertDialog(context);
+                    },
+                  ),
                 ),
                 decideImageView() ? imageView() : Text("Image Not Selected "),
               ],
@@ -74,39 +104,70 @@ class _ImageSelectorState extends State<ImageSelector> {
   Widget imageView() {
     return Column(
       children: <Widget>[
-        Image.file(
-          image,
-          width: 500,
-          height: 300,
+        Card(
+          color: Colors.yellow[600],
+          elevation: 20,
+          shadowColor: Colors.purple,
+          child: Container(
+            padding: EdgeInsets.all(10),
+            child: Image.file(
+              image,
+              width: 600,
+              fit: BoxFit.fill,
+              height: 300,
+            ),
+          ),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: <Widget>[
-            RaisedButton(
-              onPressed: () {
-                setState(() {
-                  image = null;
-                });
-              },
-              color: Colors.purple,
-              hoverColor: Colors.yellow,
-              child: Text("Remove",
-                  style: TextStyle(
-                    color: Colors.white,
-                  )),
-            ),
-            RaisedButton(
-              onPressed: () {
-                uploadImage(image);
-              },
-              color: Colors.purple,
-              hoverColor: Colors.yellow,
-              child: Text("Test",
-                  style: TextStyle(
-                    color: Colors.white,
-                  )),
-            ),
-          ],
+        Container(
+          margin: EdgeInsets.all(24),
+          padding: EdgeInsets.only(top: 10),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: <Widget>[
+              Container(
+                height: 50,
+                width: 120,
+                child: RaisedButton(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(10.0))),
+                  onPressed: () {
+                    setState(() {
+                      image = null;
+                    });
+                  },
+                  color: Colors.purple,
+                  highlightColor: Colors.yellow[600],
+                  child: Text("Remove",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                      )),
+                ),
+              ),
+              Container(
+                height: 50,
+                width: 120,
+                child: RaisedButton(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(10.0))),
+                  onPressed: () async {
+                    await Navigator.push(context,
+                        MaterialPageRoute(builder: (context) {
+                      return Upload(image);
+                    }));
+                  },
+                  color: Colors.purple,
+                  highlightColor: Colors.yellow[600],
+                  child: Text("Test",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                      )),
+                ),
+              ),
+            ],
+          ),
         )
       ],
     );
@@ -114,31 +175,56 @@ class _ImageSelectorState extends State<ImageSelector> {
 
   void showAlertDialog(BuildContext context) {
     AlertDialog alert = AlertDialog(
-      title: Text('Via :'),
+      elevation: 50,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(20.0))),
+      title: Text(' Choose an Option:',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          )),
       content: Container(
         width: double.maxFinite,
-        height: 112,
+        height: 130,
         child: Column(
           children: <Widget>[
-            ListTile(
-              title: Text(
-                "Camera",
-                style: TextStyle(fontSize: 20),
+            Card(
+              elevation: 20,
+              shadowColor: Colors.purple,
+              color: Colors.white,
+              child: ListTile(
+                leading: Icon(
+                  Icons.camera_alt,
+                  color: Colors.purple,
+                ),
+                title: Text(
+                  "Camera",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  openCammera();
+                },
               ),
-              onTap: () {
-                Navigator.of(context).pop();
-                openCammera();
-              },
             ),
-            ListTile(
-              title: Text(
-                "Gallery",
-                style: TextStyle(fontSize: 20),
+            Card(
+              elevation: 20,
+              shadowColor: Colors.purple,
+              color: Colors.white,
+              child: ListTile(
+                leading: Icon(
+                  Icons.image,
+                  color: Colors.purple,
+                ),
+                title: Text(
+                  "Gallery",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  openGallery();
+                },
               ),
-              onTap: () {
-                Navigator.of(context).pop();
-                openGallery();
-              },
             ),
           ],
         ),
@@ -160,60 +246,5 @@ class _ImageSelectorState extends State<ImageSelector> {
         builder: (BuildContext context) {
           return alert;
         });
-  }
-
-  uploadImage(File photo) async {
-    showToast(context);
-    String urlApi = "https://malar-ai.herokuapp.com/classify";
-    http.MultipartRequest request =
-        http.MultipartRequest('POST', Uri.parse(urlApi));
-
-    request.files.add(
-      await http.MultipartFile.fromPath(
-        'file',
-        photo.path,
-      ),
-    );
-
-    http.StreamedResponse r = await request.send();
-    print(r.statusCode);
-
-    var result = await r.stream.transform(utf8.decoder).join();
-    var jd = jsonDecode(result);
-    var test = jd["classification"];
-    var probability = jd["probability"];
-    probability = probability.substring(0, 5);
-    var same = probability;
-
-    showResult(test, probability, same);
-  }
-
-  showResult(test, probability, same) async {
-    await Navigator.push(context, MaterialPageRoute(builder: (context) {
-      return Result(test, probability, same);
-    }));
-  }
-
-  static void showToast(BuildContext context) {
-    OverlayEntry overlayEntry;
-
-    overlayEntry = OverlayEntry(builder: (context) => ToastWidget());
-    Overlay.of(context).insert(overlayEntry);
-    Timer(Duration(seconds: 35), () => overlayEntry.remove());
-  }
-}
-
-class ToastWidget extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.yellow[400],
-      body: Center(
-          child: Image.asset(
-        'assets/t2.gif',
-        fit: BoxFit.fill,
-        height: 300,
-      )),
-    );
   }
 }
